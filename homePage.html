@@ -1,0 +1,51 @@
+<html>
+	<head>
+		<script>
+			window.onload=function(){
+				addStates();
+			}
+			function addStates(){
+				var stateNames=["Alabama","Alaska","Arizona","Arkansas","California","Colorado",
+						"Connecticut","Delaware","District Of Columbia","Florida","Georgia",
+						"Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky",
+						"Louisiana","Maine","Maryland","Massachusetts","Michigan"					
+				];
+				var selectState=document.getElementById("state");
+				for(var i in stateNames){
+					var option=document.createElement("option");
+					option.text=stateNames[i];
+					selectState.add(option);
+				}
+			}
+			function toggleCurrentLocationCheckbox(){
+				var checkBox=document.getElementById("currentLocationCheckBox");
+				var street=document.getElementById("street");
+				var city=document.getElementById("city");
+				var state=document.getElementById("state");
+					
+				if(checkBox.checked==true){
+					street.value="";street.disabled=true;
+					city.disabled=true;city.value="";
+					state.disabled=true;state.value="default";
+				}else{
+					street.disabled=false;city.disabled=false;
+					state.disabled=false;
+				}
+			}
+		</script>	
+	</head>
+	<body>
+		<h1 style="text-align:center;">Weather Search</h1>
+		<form method="post" name="weatherSearchForm" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']) ?>">
+		<b>Street</b><input id="street" name="street" required><br>
+		<b>City</b><input id="city" name="city" required><br>
+		<b>State</b>
+			<select name="state" id="state">
+			<option value="default">State</option>
+			</select><br>
+		<input type="checkbox" onclick="toggleCurrentLocationCheckbox()" name="currentLocationCheckBox" id="currentLocationCheckBox" >Current Location<br>
+		<input type="submit" value="Search" id="searchBtn">
+		<input type="button" value="Clear">
+		</form>
+	</body>
+</html>
