@@ -4,6 +4,7 @@
 			//print_r($_REQUEST);		
             define("GOOGLE_GEOCODING_API","https://maps.googleapis.com/maps/api/geocode/json?");
 			define("FORECAST_IO_API","https://api.forecast.io/forecast/");
+			define("DARKSKY_NET_API","https://api.darksky.net/forecast/");
 			define("GOOGLE_KEY","AIzaSyDWBtO4XwwiZCwCDr6z2aK8rXZMuO0OTNM");
 			define("DARK_SKY_KEY","d815d6a10ae34088a87b7e07ffdc16ec");
 			$longitude;
@@ -29,6 +30,29 @@
 			$city="";
 			if(isset($_POST["city"])){
 				$state=$_POST["city"];
+			}
+			$time="";
+			if(isset($_POST["time"])){
+				$time=$_POST["time"];
+				function getDailyWeather($latitude,$longitude,$time){
+					$params=DARK_SKY_KEY . "/" . $latitude . "," . $longitude . "," . $time . "?";
+					$query=http_build_query([
+						'exclude' => "minutely",	
+					]);	
+					$arrContextOptions=array(
+						"ssl" =>array(
+							"verify_peer"=>false,
+							"verify_peer_name"=>false,	
+						)
+					);
+					return file_get_contents(DARKSKY_NET_API.$params.$query,false,
+						stream_context_create($arrContextOptions)				
+					);
+				}
+				$dailyWeatherJSONDoc=json_decode(getDailyWeather($latitude,$longitude,$time));
+				header('Content-type:application/json');
+                echo json_encode($dailyWeatherJSONDoc);                
+				exit();
 			}
 			if($isCurrentLocCheckBoxEnabled=="false"){
 				//print_r("inside getGeoloc");
@@ -198,10 +222,89 @@
 		<div class="container">
 			<table class="table table-hover" id="searchTable"></table>
 		</div>
+		<div id="dailyTemperatureCard" class="card bg-success" style="margin:auto;width:40%;display:none">
+			<div class="card-body">
+				<h1 id="dailyWeatherDate">some date</h1>
+				<div class="container">
+					<div class="row">
+						<div class="col-sm" style="margin:auto">							
+							<h1 id="dailySummary">Clear</h1><br>
+							<h1>								
+                    			<label id="dailyTemperature">69</label>
+                    			<sup>
+									<img src="https://cdn3.iconfinder.com/data/icons/virtual-notebook/16/button_shape_oval-512.png" width="10px" height="10px">
+                    			</sup>C
+                			</h1>
+						</div>
+						<div class="col-sm">
+                                <img id="dailyWeatherIcon" style="margin-left:auto;margin-right:auto;display:block" src="https://cdn2.iconfinder.com/data/icons/weather-74/24/weather-24-512.png" width="60%" height="60%">							
+						</div>
+					</div>
+				</div>
+				<h6 style="text-align:center;">
+					Precipitation:<label id="dailyPrecipitation">N/A</label>
+				<br>
+					Chances of Rain:<label id="dailyRain">N/A</label>
+					%
+				<br>
+					WindSpeed:<label id="dailyWindSpeed">N/A</label>
+					mph
+				<br>
+					Humidity:<label id="dailyHumidity">N/A</label>
+					%
+				<br>
+					Visibility:<label id="dailyVisibility">N/A</label>
+					mi
+				<br>
+					Sunrise/Sunset: <label id="dailySun">N/A</label>
+				</p>
+			</div>
+		</div>
+		<br>
 		<script>
+			var iconMap,isIconMapSet=false,iconURL;
+			var dailyIconMap,isDailyIconMapSet=false,dailyIconURL;
 			window.onload=function(){
 				addStates();
 				//fetchGeoLocation();
+			}
+			function mapDailyIconURL(){
+				dailyIconURL=[
+				"https://cdn3.iconfinder.com/data/icons/weather-344/142/sun-512.png",
+				"https://cdn3.iconfinder.com/data/icons/weather-344/142/rain-512.png",
+				"https://cdn3.iconfinder.com/data/icons/weather-344/142/snow-512.png",
+				"https://cdn3.iconfinder.com/data/icons/weather-344/142/lightning-512.png",
+				"https://cdn4.iconfinder.com/data/icons/the-weather-is-nice-today/64/weather_10-512.png",
+				"https://cdn3.iconfinder.com/data/icons/weather-344/142/cloudy-512.png",
+				"https://cdn3.iconfinder.com/data/icons/weather-344/142/cloud-512.png",
+				"https://cdn3.iconfinder.com/data/icons/weather-344/142/sunny-512.png"
+				];
+				var weatherTypes=["clear-day","rain","snow","sleet","wind","fog","cloudy","partly-cloudy-day"];
+				dailyIconMap=new Map();
+				dailyIconMap.set("clear-night",dailyIconURL[0]);
+				dailyIconMap.set("partly-cloudy-night",dailyIconURL[7]);
+				for(var i=0;i<8;i++){
+					dailyIconMap.set(weatherTypes[i],dailyIconURL[i]);
+				}
+			}
+			function mapIconURL(){
+				iconURL=[
+				"https://cdn2.iconfinder.com/data/icons/weather-74/24/weather-12-512.png",
+				"https://cdn2.iconfinder.com/data/icons/weather-74/24/weather-04-512.png",
+				"https://cdn2.iconfinder.com/data/icons/weather-74/24/weather-19-512.png",
+				"https://cdn2.iconfinder.com/data/icons/weather-74/24/weather-07-512.png",
+				"https://cdn2.iconfinder.com/data/icons/weather-74/24/weather-27-512.png",
+				"https://cdn2.iconfinder.com/data/icons/weather-74/24/weather-28-512.png",
+				"https://cdn2.iconfinder.com/data/icons/weather-74/24/weather-01-512.png",
+				"https://cdn2.iconfinder.com/data/icons/weather-74/24/weather-02-512.png"
+				];
+				var weatherTypes=["clear-day","rain","snow","sleet","wind","fog","cloudy","partly-cloudy-day"];
+				iconMap=new Map();
+				iconMap.set("clear-night",iconURL[0]);
+				iconMap.set("partly-cloudy-night",iconURL[7]);
+				for(var i=0;i<8;i++){
+					iconMap.set(weatherTypes[i],iconURL[i]);
+				}
 			}
 			function submitForm(){
 				var xmlHttpRequest=new XMLHttpRequest();
@@ -220,9 +323,9 @@
 				query="currentLocationCheckBox=";
 				if(currentLocationCheckBox.checked==false){
 					document.getElementById("currentCityName").innerHTML=city.value;
-					query+="true";
-				}else{
 					query+="false";
+				}else{
+					query+="true";
 				}
 				query=query+"&latitude="+weatherSearchForm.latitude.value
 							+"&longitude="+weatherSearchForm.longitude.value;
@@ -238,10 +341,27 @@
 				var currentWeatherJSONDoc=xmlHttpRequest.responseText;
 				console.log(currentWeatherJSONDoc);
 				var currentWeatherJSON=JSON.parse(currentWeatherJSONDoc);
+				document.getElementById("latitude").value =currentWeatherJSON.latitude;
+                document.getElementById("longitude").value =currentWeatherJSON.longitude;
 				document.getElementById("currentTemperatureCard").style.display="block";
+				document.getElementById("dailyTemperatureCard").style.display="none";
 				createCurrentWeatherCard(currentWeatherJSON);
 				clearTemperaturePredictionTable();
 				createDailyWeatherPredictionTable(currentWeatherJSON);
+			}
+			function fetchDailyWeatherDescription(){
+					console.log(this.value);
+					var xmlHttpRequest=new XMLHttpRequest();
+					xmlHttpRequest.open("post","index.php",false);
+					xmlHttpRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+					query="time="+this.value;					
+					query=query+"&latitude="+weatherSearchForm.latitude.value
+						+"&longitude="+weatherSearchForm.longitude.value;
+					xmlHttpRequest.send(query);
+					var dailyWeatherDescriptionJSONDoc=xmlHttpRequest.responseText;
+					console.log(dailyWeatherDescriptionJSONDoc);
+					var dailyWeatherDescriptionJSON=JSON.parse(dailyWeatherDescriptionJSONDoc);
+					createDailyWeatherCard(dailyWeatherDescriptionJSON);
 			}
 			function clearTemperaturePredictionTable(){
 				document.getElementById("searchTable").innerHTML="";
@@ -294,11 +414,71 @@
 					state.disabled=false;
 				}
 			}
+			function getPrecipitationType(value){
+				if(value<=0.001) return "None";
+				else if(value<=0.015) return "Very Light";
+				else if(value<=0.05) return "Light";
+				else if(value<=0.1) return "Moderate";
+				else return "Heavy";
+			}
+			function createDailyWeatherCard(dailyWeatherDescriptionJSON){
+				var dailyTemperatureCard=document.getElementById("dailyTemperatureCard");
+				if(dailyTemperatureCard.style.display=="none"){
+					dailyTemperatureCard.style.display="block";
+				}
+				if(!isDailyIconMapSet){
+					mapDailyIconURL();
+					isDailyIconMapSet=true;
+				}
+				var dailyWeatherDate=new Date(dailyWeatherDescriptionJSON.currently.time*1000);
+				document.getElementById("dailyWeatherDate").innerHTML
+					=dailyWeatherDate.toDateString();
+				document.getElementById("dailyWeatherIcon").src
+					=dailyIconMap.get(dailyWeatherDescriptionJSON.currently.icon);
+				document.getElementById("dailySummary").innerHTML
+					=dailyWeatherDescriptionJSON.currently.summary;
+				document.getElementById("dailyTemperature").innerHTML
+					=fahrenheitToCelsius(dailyWeatherDescriptionJSON.currently.temperature);
+					
+				
+				document.getElementById("dailyPrecipitation").innerHTML
+					=getPrecipitationType(dailyWeatherDescriptionJSON.currently.precipIntensity);
+				document.getElementById("dailyRain").innerHTML
+					=(dailyWeatherDescriptionJSON.currently.precipProbability*100).toPrecision(2);
+				document.getElementById("dailyWindSpeed").innerHTML
+					=dailyWeatherDescriptionJSON.currently.windSpeed;
+				document.getElementById("dailyHumidity").innerHTML
+					=(dailyWeatherDescriptionJSON.currently.humidity*100).toPrecision(2);
+				document.getElementById("dailyVisibility").innerHTML
+					=dailyWeatherDescriptionJSON.currently.visibility;
+				var sunRiseTime=new Date(dailyWeatherDescriptionJSON.daily.data[0].sunriseTime*1000);
+				var sunSetTime=new Date(dailyWeatherDescriptionJSON.daily.data[0].sunsetTime*1000);
+				
+				document.getElementById("dailySun").innerHTML
+					=getFormattedSuntime(sunRiseTime,sunSetTime);
+			}
+			function getFormattedSuntime(sunRiseTime,sunSetTime){
+				var suntime="";
+				if(sunRiseTime.getHours()<10)
+					suntime+="0";
+				suntime+=sunRiseTime.getHours();
+				if(sunRiseTime.getMinutes()<10)
+					suntime+="0";
+				suntime+=sunRiseTime.getMinutes()+"hrs / ";
+				if(sunSetTime.getHours()<10)
+					suntime+="0";
+				suntime+=sunSetTime.getHours();
+				if(sunSetTime.getMinutes()<10)
+					suntime+="0";
+				suntime+=sunSetTime.getMinutes()+"hrs";
+				return suntime;
+			}
 			function createCurrentWeatherCard(currentWeatherJSON){
 				document.getElementById("currentTimezone").innerHTML=currentWeatherJSON.timezone;
-				document.getElementById("currentTemperature").innerHTML=fahrenheitToCelsius(currentWeatherJSON.currently.temperature);
+				document.getElementById("currentTemperature").innerHTML
+					=fahrenheitToCelsius(currentWeatherJSON.currently.temperature);
 				document.getElementById("currentSummary").innerHTML=currentWeatherJSON.currently.summary;
-				document.getElementById("currentHumidity").innerHTML=currentWeatherJSON.currently.humidity*100;
+				document.getElementById("currentHumidity").innerHTML=(currentWeatherJSON.currently.humidity*100).toPrecision(2);
 				document.getElementById("currentPressure").innerHTML=currentWeatherJSON.currently.pressure;
 				document.getElementById("currentWindSpeed").innerHTML=currentWeatherJSON.currently.windSpeed;
 				document.getElementById("currentVisibility").innerHTML=currentWeatherJSON.currently.visibility;
@@ -314,6 +494,10 @@
 					var headRowColumn1=createColumn("No Results to Display",document,"th");
 					headRow.appendChild(headRowColumn1);
 				}else{
+					if(!isIconMapSet){
+						mapIconURL();
+						isIconMapSet=true;
+					}
 					var headerName=["Date","Status","Summary","Temperature High","Temperature Low","Wind Speed"];
 					for(k in headerName){
 						var column=createColumn(headerName[k],document,"th");
@@ -329,8 +513,8 @@
 					for(i in dailyWeatherPredictionArray){
 						var predictionDate=new Date(dailyWeatherPredictionArray[i].time*1000);
 						var column1=createColumn(predictionDate.toDateString(),document,"td");
-						var column2=createColumn(dailyWeatherPredictionArray[i].icon,document,"td");
-						var column3=createColumn(dailyWeatherPredictionArray[i].summary,document,"td");
+						var column2=createImageColumn(iconMap.get(dailyWeatherPredictionArray[i].icon),document,"td");
+						var column3=createAnchorColumn(dailyWeatherPredictionArray[i].summary,dailyWeatherPredictionArray[i].time,document,"td");
 						var column4=createColumn(fahrenheitToCelsius(dailyWeatherPredictionArray[i].temperatureHigh),document,"td");
 						var column5=createColumn(fahrenheitToCelsius(dailyWeatherPredictionArray[i].temperatureLow),document,"td");
 						var column6=createColumn(dailyWeatherPredictionArray[i].windSpeed,document,"td");
@@ -343,11 +527,33 @@
 					searchTable.appendChild(searchTableBody);
 				}
 			}
+			function createAnchorColumn(colText,colValue,documentName,rowType){
+				var column=documentName.createElement(rowType);
+				column.style.border="1px solid black";
+				var anchorTag=documentName.createElement("a");
+				anchorTag.value=colValue;
+				anchorTag.title="View Summary";
+				anchorTag.onclick=fetchDailyWeatherDescription;
+				anchorTag.appendChild(document.createTextNode(colText));
+				column.appendChild(anchorTag);
+				return column;
+			}
 			function createColumn(colText,documentName,rowType){
 				var column=documentName.createElement(rowType);
 				column.style.border="1px solid black";
 				var columnText=documentName.createTextNode(colText);
 				column.appendChild(columnText);
+				return column;
+			}
+			function createImageColumn(imgSrc,documentName,rowType){
+				var column=documentName.createElement(rowType);
+				column.style.border="1px solid black";
+				var imgTag=documentName.createElement("img");
+				imgTag.setAttribute("src",imgSrc);
+				imgTag.setAttribute("align","center");
+				imgTag.setAttribute("width","50px");
+				imgTag.setAttribute("height","50px");
+				column.appendChild(imgTag);	
 				return column;
 			}
 		</script>
